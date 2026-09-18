@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AS OrderFlow</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#0b0f14;
+ color:#e8edf3;
+ font-family:Arial,sans-serif;
+}
+.header{
+ height:58px;
+ background:#111820;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ padding:0 15px;
+ border-bottom:1px solid #29323c;
+}
+.logo{
+ font-size:20px;
+ font-weight:bold;
+ color:#42d392;
+}
+.controls{
+ display:flex;
+ gap:8px;
+}
+button,select{
+ background:#18212b;
+ color:white;
+ border:1px solid #35414d;
+ border-radius:5px;
+ padding:8px 12px;
+}
+.main{
+ padding:10px;
+}
+.chart{
+ height:430px;
+ background:#10161d;
+ border:1px solid #29323c;
+ border-radius:7px;
+ position:relative;
+ overflow:hidden;
+}
+.title{
+ padding:10px;
+ color:#9da9b5;
+}
+.candles{
+ height:350px;
+ display:flex;
+ align-items:center;
+ justify-content:space-around;
+ padding:10px;
+}
+.candle{
+ width:12px;
+ position:relative;
+}
+.wick{
+ width:2px;
+ height:80px;
+ background:#aaa;
+ position:absolute;
+ left:5px;
+ top:-30px;
+}
+.body{
+ width:12px;
+ height:45px;
+ border-radius:2px;
+}
+.green .body{background:#21c784}
+.red .body{background:#e05260}
+.green .wick{background:#21c784}
+.red .wick{background:#e05260}
+
+.info{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:8px;
+ margin-top:10px;
+}
+.box{
+ background:#111820;
+ border:1px solid #29323c;
+ border-radius:7px;
+ padding:14px;
+}
+.label{
+ color:#8793a0;
+ font-size:12px;
+}
+.value{
+ font-size:18px;
+ margin-top:6px;
+ font-weight:bold;
+}
+.greenText{color:#21c784}
+.redText{color:#e05260}
+
+.footprint{
+ margin-top:10px;
+ background:#10161d;
+ border:1px solid #29323c;
+ border-radius:7px;
+ padding:12px;
+ overflow:auto;
+}
+table{
+ width:100%;
+ border-collapse:collapse;
+ text-align:center;
+}
+th{
+ color:#7f8b98;
+ font-size:12px;
+ padding:8px;
+}
+td{
+ padding:8px;
+ border-top:1px solid #202932;
+}
+.buy{color:#21c784}
+.sell{color:#e05260}
+.deltaPos{color:#21c784;font-weight:bold}
+.deltaNeg{color:#e05260;font-weight:bold}
+
+@media(max-width:600px){
+ .info{grid-template-columns:repeat(2,1fr)}
+ .chart{height:360px}
+ .candles{height:290px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+ <div class="logo">AS ORDERFLOW</div>
+
+ <div class="controls">
+  <select>
+   <option>BTCUSDT</option>
+   <option>ETHUSDT</option>
+   <option>SOLUSDT</option>
+  </select>
+
+  <select>
+   <option>5m</option>
+   <option>15m</option>
+   <option>1H</option>
+  </select>
+ </div>
+</div>
+
+<div class="main">
+
+<div class="chart">
+ <div class="title">
+  BTCUSDT · FOOTPRINT
+ </div>
+
+ <div class="candles">
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle red">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle red">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle red">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+  <div class="candle green">
+   <div class="wick"></div><div class="body"></div>
+  </div>
+
+ </div>
+</div>
+
+<div class="info">
+
+ <div class="box">
+  <div class="label">DELTA</div>
+  <div class="value greenText">+1,250</div>
+ </div>
+
+ <div class="box">
+  <div class="label">CVD</div>
+  <div class="value greenText">↑ 8,420</div>
+ </div>
+
+ <div class="box">
+  <div class="label">POC</div>
+  <div class="value">105,100</div>
+ </div>
+
+ <div class="box">
+  <div class="label">VWAP</div>
+  <div class="value">105,080</div>
+ </div>
+
+</div>
+
+<div class="footprint">
+
+ <h3>FOOTPRINT</h3>
+
+ <table>
+  <tr>
+   <th>PRICE</th>
+   <th>BUY</th>
+   <th>SELL</th>
+   <th>DELTA</th>
+  </tr>
+
+  <tr>
+   <td>105200</td>
+   <td class="buy">320</td>
+   <td class="sell">180</td>
+   <td class="deltaPos">+140</td>
+  </tr>
+
+  <tr>
+   <td>105100</td>
+   <td class="buy">250</td>
+   <td class="sell">310</td>
+   <td class="deltaNeg">-60</td>
+  </tr>
+
+  <tr>
+   <td>105000</td>
+   <td class="buy">420</td>
+   <td class="sell">190</td>
+   <td class="deltaPos">+230</td>
+  </tr>
+
+  <tr>
+   <td>104900</td>
+   <td class="buy">180</td>
+   <td class="sell">350</td>
+   <td class="deltaNeg">-170</td>
+  </tr>
+
+ </table>
+
+</div>
+
+</div>
+
+</body>
+</html>
