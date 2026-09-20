@@ -250,14 +250,37 @@ td{
 </div>
 
 <script>
-
 const statusEl = document.getElementById("status");
+const priceEl = document.getElementById("price");
 
 function setStatus(message){
   statusEl.textContent = message;
 }
 
-setStatus("AS OrderFlow ready");
+async function loadMarket(){
+  try{
+    setStatus("Connecting to market data...");
+
+    const response = await fetch("/api/market");
+    const data = await response.json();
+
+    if(data.price !== null){
+      priceEl.textContent = data.price;
+      setStatus("Live market data connected");
+    }else{
+      priceEl.textContent = "--";
+      setStatus("Waiting for live market feed...");
+    }
+
+  }catch(error){
+    console.error(error);
+    setStatus("Market data connection error");
+  }
+}
+
+loadMarket();
+
+setInterval(loadMarket, 3000);
 
 </script>
 
