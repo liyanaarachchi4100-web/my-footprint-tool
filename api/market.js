@@ -2,14 +2,28 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
+    const url =
+      `https://api.twelvedata.com/price?symbol=XAU/USD&apikey=${apiKey}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok || !data.price) {
+      return res.status(500).json({
+        error: "Twelve Data error",
+        details: data
+      });
+    }
+
     return res.status(200).json({
-      envKeyExists: Boolean(apiKey),
-      envKeyLength: apiKey ? apiKey.length : 0
+      symbol: "XAU/USD",
+      price: Number(data.price),
+      status: "live"
     });
 
   } catch (error) {
     return res.status(500).json({
-      error: "Test failed"
+      error: "Market data request failed"
     });
   }
 }
