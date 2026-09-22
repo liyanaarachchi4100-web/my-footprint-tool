@@ -1,286 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>AS OrderFlow</title>
+  <title>AS OrderFlow</title>
 
-<style>
-*{
-  box-sizing:border-box;
-}
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0b0f14;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
 
-body{
-  margin:0;
-  background:#0b0f14;
-  color:#e8edf3;
-  font-family:Arial,sans-serif;
-}
+    h1 {
+      margin-top: 0;
+    }
 
-.header{
-  height:58px;
-  background:#111820;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 15px;
-  border-bottom:1px solid #29323c;
-}
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
 
-.logo{
-  font-size:20px;
-  font-weight:bold;
-  color:#42d392;
-}
+    select {
+      background: #151b23;
+      color: white;
+      border: 1px solid #333;
+      padding: 10px;
+      border-radius: 6px;
+    }
 
-.controls{
-  display:flex;
-  gap:8px;
-}
+    .status {
+      margin-bottom: 15px;
+      color: #55d98b;
+    }
 
-select,button{
-  background:#18212b;
-  color:white;
-  border:1px solid #35414d;
-  border-radius:5px;
-  padding:8px 12px;
-}
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
 
-.main{
-  padding:10px;
-}
+    .card {
+      background: #151b23;
+      border: 1px solid #252d38;
+      border-radius: 8px;
+      padding: 15px;
+    }
 
-.chart{
-  height:430px;
-  background:#10161d;
-  border:1px solid #29323c;
-  border-radius:7px;
-  overflow:hidden;
-}
+    .label {
+      color: #8b96a5;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
 
-.title{
-  padding:10px;
-  color:#9da9b5;
-  font-weight:bold;
-}
+    .value {
+      font-size: 22px;
+      font-weight: bold;
+    }
 
-.status{
-  padding:0 10px 10px;
-  font-size:13px;
-  color:#42d392;
-}
+    #chart {
+      height: 400px;
+      background: #11161d;
+      border: 1px solid #252d38;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #7d8794;
+      margin-bottom: 20px;
+    }
 
-#chart{
-  width:100%;
-  height:350px;
-}
+    .footprint {
+      background: #151b23;
+      border: 1px solid #252d38;
+      border-radius: 8px;
+      padding: 15px;
+    }
 
-.info{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:8px;
-  margin-top:10px;
-}
-
-.box{
-  background:#111820;
-  border:1px solid #29323c;
-  border-radius:7px;
-  padding:14px;
-}
-
-.label{
-  color:#8793a0;
-  font-size:12px;
-}
-
-.value{
-  font-size:18px;
-  margin-top:6px;
-  font-weight:bold;
-}
-
-.green{
-  color:#21c784;
-}
-
-.red{
-  color:#e05260;
-}
-
-.footprint{
-  margin-top:10px;
-  background:#10161d;
-  border:1px solid #29323c;
-  border-radius:7px;
-  padding:12px;
-  overflow:auto;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  text-align:center;
-}
-
-th{
-  color:#7f8b98;
-  font-size:12px;
-  padding:8px;
-}
-
-td{
-  padding:8px;
-  border-top:1px solid #202932;
-}
-
-@media(max-width:600px){
-  .info{
-    grid-template-columns:repeat(2,1fr);
-  }
-
-  .chart{
-    height:360px;
-  }
-
-  #chart{
-    height:280px;
-  }
-}
-</style>
+    @media (max-width: 700px) {
+      .cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="header">
-
-  <div class="logo">
-    AS ORDERFLOW
-  </div>
+  <h1>AS OrderFlow</h1>
 
   <div class="controls">
-
     <select id="symbol">
-      <option value="XAUUSD">XAUUSD</option>
+      <option value="XAU/USD">XAUUSD</option>
     </select>
 
     <select id="timeframe">
-      <option value="1">1m</option>
-      <option value="5">5m</option>
-      <option value="15">15m</option>
-      <option value="60">1H</option>
+      <option value="1min">1 Minute</option>
+      <option value="5min">5 Minutes</option>
+      <option value="15min">15 Minutes</option>
+      <option value="1h">1 Hour</option>
     </select>
-
   </div>
 
-</div>
-
-<div class="main">
-
-  <div class="chart">
-
-    <div class="title">
-      XAUUSD · ORDER FLOW
-    </div>
-
-    <div class="status" id="status">
-      Waiting for market data...
-    </div>
-
-    <div id="chart"></div>
-
+  <div class="status" id="status">
+    Connecting to live market data...
   </div>
 
+  <div class="cards">
 
-  <div class="info">
-
-    <div class="box">
+    <div class="card">
       <div class="label">PRICE</div>
       <div class="value" id="price">--</div>
     </div>
 
-    <div class="box">
+    <div class="card">
       <div class="label">DELTA</div>
       <div class="value" id="delta">--</div>
     </div>
 
-    <div class="box">
+    <div class="card">
       <div class="label">CVD</div>
       <div class="value" id="cvd">--</div>
     </div>
 
-    <div class="box">
+    <div class="card">
       <div class="label">VWAP</div>
       <div class="value" id="vwap">--</div>
     </div>
 
   </div>
 
-
-  <div class="footprint">
-
-    <h3>FOOTPRINT</h3>
-
-    <table>
-
-      <thead>
-        <tr>
-          <th>PRICE</th>
-          <th>BUY</th>
-          <th>SELL</th>
-          <th>DELTA</th>
-        </tr>
-      </thead>
-
-      <tbody id="footprintBody">
-
-        <tr>
-          <td colspan="4">
-            Waiting for real market data...
-          </td>
-        </tr>
-
-      </tbody>
-
-    </table>
-
+  <div id="chart">
+    Candlestick chart will appear here
   </div>
 
-</div>
+  <div class="footprint">
+    <h3>Footprint</h3>
+    <p id="footprintStatus">
+      Waiting for real market data...
+    </p>
+  </div>
 
 <script>
-const statusEl = document.getElementById("status");
-const priceEl = document.getElementById("price");
 
-function setStatus(message){
-  statusEl.textContent = message;
-}
+let lastPrice = null;
 
-async function loadMarket(){
-  try{
-    setStatus("Connecting to market data...");
+/*
+  Get live XAU/USD price
+*/
+async function updateMarket() {
 
-    const response = await fetch("/api/market");
+  try {
+
+    const response = await fetch(
+      "/api/market?t=" + Date.now(),
+      {
+        cache: "no-store"
+      }
+    );
+
     const data = await response.json();
 
-    if(data.price !== null){
-      priceEl.textContent = data.price;
-      setStatus("Live market data connected");
-    }else{
-      priceEl.textContent = "--";
-      setStatus("Waiting for live market feed...");
+    /*
+      Only update PRICE when a valid price arrives.
+      If an API request fails, keep the previous price.
+    */
+    if (
+      response.ok &&
+      data.status === "live" &&
+      typeof data.price === "number"
+    ) {
+
+      lastPrice = data.price;
+
+      document.getElementById("price").textContent =
+        lastPrice.toFixed(2);
+
+      document.getElementById("status").textContent =
+        "● Live market data connected";
+
+      document.getElementById("footprintStatus").textContent =
+        "Live XAU/USD price connected. Footprint data pending.";
+
+    } else {
+
+      /*
+        Do NOT erase the previous price.
+      */
+
+      if (lastPrice !== null) {
+        document.getElementById("price").textContent =
+          lastPrice.toFixed(2);
+      }
+
+      document.getElementById("status").textContent =
+        "● Waiting for next live update...";
+
     }
 
-  }catch(error){
-    console.error(error);
-    setStatus("Market data connection error");
+  } catch (error) {
+
+    /*
+      Keep the previous price if connection temporarily fails.
+    */
+
+    if (lastPrice !== null) {
+      document.getElementById("price").textContent =
+        lastPrice.toFixed(2);
+    }
+
+    document.getElementById("status").textContent =
+      "● Temporary connection problem — retrying...";
+
   }
+
 }
 
-loadMarket();
 
-setInterval(loadMarket, 3000);
+/*
+  First request immediately
+*/
+updateMarket();
+
+
+/*
+  Update every 10 seconds
+*/
+setInterval(updateMarket, 10000);
 
 </script>
 
