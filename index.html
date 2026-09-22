@@ -6,7 +6,8 @@
 
   <title>AS OrderFlow</title>
 
-  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <!-- Lightweight Charts 4.2.3 -->
+  <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 
   <style>
     body {
@@ -145,21 +146,19 @@
   <div id="chart"></div>
 
   <div class="footprint">
-
     <h3>Footprint</h3>
 
     <p id="footprintStatus">
       Waiting for real market data...
     </p>
-
   </div>
 
 
 <script>
 
 let lastPrice = null;
-let chart;
-let candleSeries;
+let chart = null;
+let candleSeries = null;
 
 
 /* =========================
@@ -171,6 +170,9 @@ function createChart() {
   const container = document.getElementById("chart");
 
   chart = LightweightCharts.createChart(container, {
+
+    width: container.clientWidth,
+    height: container.clientHeight,
 
     layout: {
       background: {
@@ -222,7 +224,8 @@ function createChart() {
   window.addEventListener("resize", function() {
 
     chart.applyOptions({
-      width: container.clientWidth
+      width: container.clientWidth,
+      height: container.clientHeight
     });
 
   });
@@ -241,17 +244,20 @@ async function loadCandles() {
 
   try {
 
-    const response = await fetch(
+    const url =
       "/api/market?interval=" +
       encodeURIComponent(interval) +
       "&t=" +
-      Date.now(),
-      {
-        cache: "no-store"
-      }
-    );
+      Date.now();
+
+    const response = await fetch(url, {
+      cache: "no-store"
+    });
 
     const data = await response.json();
+
+    console.log("MARKET DATA:", data);
+
 
     if (
       !response.ok ||
@@ -261,36 +267,50 @@ async function loadCandles() {
 
       console.log("Candle data unavailable:", data);
 
-      return;
+      document.getElementById("status").textContent =
+        "Market data unavailable";
 
+      return;
     }
 
 
     const candles = data.values
+
       .map(function(item) {
+
+        const timestamp =
+          Math.floor(
+            new Date(item.datetime.replace(" ", "T")).getTime() / 1000
+          );
 
         return {
 
-          time: Math.floor(
-            new Date(item.datetime).getTime() / 1000
-          ),
+          time: timestamp,
 
           open: Number(item.open),
+
           high: Number(item.high),
+
           low: Number(item.low),
+
           close: Number(item.close)
 
         };
 
       })
+
       .filter(function(candle) {
 
-        return Number.isFinite(candle.open) &&
-               Number.isFinite(candle.high) &&
-               Number.isFinite(candle.low) &&
-               Number.isFinite(candle.close);
+        return (
+          Number.isFinite(candle.time) &&
+          Number.isFinite(candle.open) &&
+          Number.isFinite(candle.high) &&
+          Number.isFinite(candle.low) &&
+          Number.isFinite(candle.close)
+        );
 
       })
+
       .sort(function(a, b) {
 
         return a.time - b.time;
@@ -298,31 +318,79 @@ async function loadCandles() {
       });
 
 
-    if (candles.length > 0) {
-
-      candleSeries.setData(candles);
-
-      chart.timeScale().fitContent();
-
-      const latest =
-        candles[candles.length - 1].close;
-
-      lastPrice = latest;
-
-      document.getElementById("price").textContent =
-        latest.toFixed(2);
+    if (candles.length === 0) {
 
       document.getElementById("status").textContent =
-        "● Live XAU/USD market data";
+        "No candle data received";
 
-      document.getElementById("footprintStatus").textContent =
-        "Real XAU/USD candle data connected. Footprint data pending.";
-
+      return;
     }
 
-  } catch (error) {
+
+    /* =========================
+       REMOVE DUPLICATE TIMES
+    ========================= */
+
+    const uniqueCandles = [];
+
+    const usedTimes = new Set();
+
+    candles.forEach(function(candle) {
+
+      if (!usedTimes.has(candle.time)) {
+
+        usedTimes.add(candle.time);
+
+        uniqueCandles.push(candle);
+
+      }
+
+    });
+
+
+    /* =========================
+       SEND DATA TO CHART
+    ========================= */
+
+    candleSeries.setData(uniqueCandles);
+
+
+    /* =========================
+       SHOW LATEST PRICE
+    ========================= */
+
+    const latest =
+      uniqueCandles[uniqueCandles.length - 1].close;
+
+    lastPrice = latest;
+
+    document.getElementById("price").textContent =
+      latest.toFixed(2);
+
+
+    document.getElementById("status").textContent =
+      "● Live XAU/USD market data";
+
+
+    document.getElementById("footprintStatus").textContent =
+      "Real XAU/USD OHLC candle data connected.";
+
+
+    /* =========================
+       FIT CHART
+    ========================= */
+
+    chart.timeScale().fitContent();
+
+  }
+
+  catch (error) {
 
     console.log("Candle request failed:", error);
+
+    document.getElementById("status").textContent =
+      "Connection problem";
+
 
     if (lastPrice !== null) {
 
@@ -358,11 +426,15 @@ createChart();
 loadCandles();
 
 
-/*
-   Refresh candles every 10 seconds
-*/
+/* =========================
+   REFRESH EVERY 10 SECONDS
+========================= */
 
-setInterval(loadCandles, 10000);
+setInterval(function() {
+
+  loadCandles();
+
+}, 10000);
 
 </script>
 
