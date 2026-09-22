@@ -6,6 +6,8 @@
 
   <title>AS OrderFlow</title>
 
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -65,14 +67,12 @@
     }
 
     #chart {
-      height: 400px;
+      width: 100%;
+      height: 450px;
       background: #11161d;
       border: 1px solid #252d38;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #7d8794;
+      overflow: hidden;
       margin-bottom: 20px;
     }
 
@@ -87,6 +87,10 @@
       .cards {
         grid-template-columns: repeat(2, 1fr);
       }
+
+      #chart {
+        height: 380px;
+      }
     }
   </style>
 </head>
@@ -96,6 +100,7 @@
   <h1>AS OrderFlow</h1>
 
   <div class="controls">
+
     <select id="symbol">
       <option value="XAU/USD">XAUUSD</option>
     </select>
@@ -106,6 +111,7 @@
       <option value="15min">15 Minutes</option>
       <option value="1h">1 Hour</option>
     </select>
+
   </div>
 
   <div class="status" id="status">
@@ -136,30 +142,110 @@
 
   </div>
 
-  <div id="chart">
-    Candlestick chart will appear here
-  </div>
+  <div id="chart"></div>
 
   <div class="footprint">
+
     <h3>Footprint</h3>
+
     <p id="footprintStatus">
       Waiting for real market data...
     </p>
+
   </div>
+
 
 <script>
 
 let lastPrice = null;
+let chart;
+let candleSeries;
 
-/*
-  Get live XAU/USD price
-*/
-async function updateMarket() {
+
+/* =========================
+   CREATE CHART
+========================= */
+
+function createChart() {
+
+  const container = document.getElementById("chart");
+
+  chart = LightweightCharts.createChart(container, {
+
+    layout: {
+      background: {
+        color: "#11161d"
+      },
+      textColor: "#b8c0cc"
+    },
+
+    grid: {
+      vertLines: {
+        color: "#202731"
+      },
+      horzLines: {
+        color: "#202731"
+      }
+    },
+
+    rightPriceScale: {
+      borderColor: "#303844"
+    },
+
+    timeScale: {
+      borderColor: "#303844",
+      timeVisible: true,
+      secondsVisible: false
+    },
+
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal
+    }
+
+  });
+
+
+  candleSeries = chart.addCandlestickSeries({
+
+    upColor: "#26a69a",
+    downColor: "#ef5350",
+
+    borderUpColor: "#26a69a",
+    borderDownColor: "#ef5350",
+
+    wickUpColor: "#26a69a",
+    wickDownColor: "#ef5350"
+
+  });
+
+
+  window.addEventListener("resize", function() {
+
+    chart.applyOptions({
+      width: container.clientWidth
+    });
+
+  });
+
+}
+
+
+/* =========================
+   LOAD CANDLES
+========================= */
+
+async function loadCandles() {
+
+  const interval =
+    document.getElementById("timeframe").value;
 
   try {
 
     const response = await fetch(
-      "/api/market?t=" + Date.now(),
+      "/api/market?interval=" +
+      encodeURIComponent(interval) +
+      "&t=" +
+      Date.now(),
       {
         cache: "no-store"
       }
@@ -167,72 +253,116 @@ async function updateMarket() {
 
     const data = await response.json();
 
-    /*
-      Only update PRICE when a valid price arrives.
-      If an API request fails, keep the previous price.
-    */
     if (
-      response.ok &&
-      data.status === "live" &&
-      typeof data.price === "number"
+      !response.ok ||
+      data.status !== "live" ||
+      !Array.isArray(data.values)
     ) {
 
-      lastPrice = data.price;
+      console.log("Candle data unavailable:", data);
+
+      return;
+
+    }
+
+
+    const candles = data.values
+      .map(function(item) {
+
+        return {
+
+          time: Math.floor(
+            new Date(item.datetime).getTime() / 1000
+          ),
+
+          open: Number(item.open),
+          high: Number(item.high),
+          low: Number(item.low),
+          close: Number(item.close)
+
+        };
+
+      })
+      .filter(function(candle) {
+
+        return Number.isFinite(candle.open) &&
+               Number.isFinite(candle.high) &&
+               Number.isFinite(candle.low) &&
+               Number.isFinite(candle.close);
+
+      })
+      .sort(function(a, b) {
+
+        return a.time - b.time;
+
+      });
+
+
+    if (candles.length > 0) {
+
+      candleSeries.setData(candles);
+
+      chart.timeScale().fitContent();
+
+      const latest =
+        candles[candles.length - 1].close;
+
+      lastPrice = latest;
 
       document.getElementById("price").textContent =
-        lastPrice.toFixed(2);
+        latest.toFixed(2);
 
       document.getElementById("status").textContent =
-        "● Live market data connected";
+        "● Live XAU/USD market data";
 
       document.getElementById("footprintStatus").textContent =
-        "Live XAU/USD price connected. Footprint data pending.";
-
-    } else {
-
-      /*
-        Do NOT erase the previous price.
-      */
-
-      if (lastPrice !== null) {
-        document.getElementById("price").textContent =
-          lastPrice.toFixed(2);
-      }
-
-      document.getElementById("status").textContent =
-        "● Waiting for next live update...";
+        "Real XAU/USD candle data connected. Footprint data pending.";
 
     }
 
   } catch (error) {
 
-    /*
-      Keep the previous price if connection temporarily fails.
-    */
+    console.log("Candle request failed:", error);
 
     if (lastPrice !== null) {
+
       document.getElementById("price").textContent =
         lastPrice.toFixed(2);
-    }
 
-    document.getElementById("status").textContent =
-      "● Temporary connection problem — retrying...";
+    }
 
   }
 
 }
 
 
-/*
-  First request immediately
-*/
-updateMarket();
+/* =========================
+   TIMEFRAME CHANGE
+========================= */
+
+document
+  .getElementById("timeframe")
+  .addEventListener("change", function() {
+
+    loadCandles();
+
+  });
+
+
+/* =========================
+   START
+========================= */
+
+createChart();
+
+loadCandles();
 
 
 /*
-  Update every 10 seconds
+   Refresh candles every 10 seconds
 */
-setInterval(updateMarket, 10000);
+
+setInterval(loadCandles, 10000);
 
 </script>
 
