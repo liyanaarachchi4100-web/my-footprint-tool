@@ -156,6 +156,8 @@
 <script>
 
 let lastPrice = null;
+let lastVWAP = null;
+
 let chart = null;
 let candleSeries = null;
 let vwapSeries = null;
@@ -207,10 +209,6 @@ function createChart() {
   });
 
 
-  /* =========================
-     CANDLESTICK SERIES
-  ========================= */
-
   candleSeries = chart.addCandlestickSeries({
 
     upColor: "#26a69a",
@@ -225,9 +223,7 @@ function createChart() {
   });
 
 
-  /* =========================
-     REAL VWAP SERIES
-  ========================= */
+  /* REAL VWAP */
 
   vwapSeries = chart.addLineSeries({
 
@@ -240,15 +236,16 @@ function createChart() {
   });
 
 
-  /* =========================
-     RESIZE
-  ========================= */
+  /* RESIZE */
 
   window.addEventListener("resize", function() {
 
     chart.applyOptions({
+
       width: container.clientWidth,
+
       height: container.clientHeight
+
     });
 
   });
@@ -274,26 +271,47 @@ async function loadCandles() {
       Date.now();
 
     const response = await fetch(url, {
+
       cache: "no-store"
+
     });
+
+
+    /* CHECK HTTP RESPONSE */
+
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " + response.status
+      );
+
+    }
+
 
     const data = await response.json();
 
     console.log("MARKET DATA:", data);
 
 
+    /* =========================
+       CHECK REAL DATA
+    ========================= */
+
     if (
-      !response.ok ||
-      data.status !== "live" ||
-      !Array.isArray(data.values)
+      !Array.isArray(data.values) ||
+      data.values.length === 0
     ) {
 
-      console.log("Market data unavailable:", data);
+      console.log(
+        "No candle values received:",
+        data
+      );
 
       document.getElementById("status").textContent =
-        "Market data unavailable";
+        "Waiting for market data...";
 
       return;
+
     }
 
 
@@ -331,11 +349,17 @@ async function loadCandles() {
       .filter(function(candle) {
 
         return (
+
           Number.isFinite(candle.time) &&
+
           Number.isFinite(candle.open) &&
+
           Number.isFinite(candle.high) &&
+
           Number.isFinite(candle.low) &&
+
           Number.isFinite(candle.close)
+
         );
 
       })
@@ -350,14 +374,15 @@ async function loadCandles() {
     if (candles.length === 0) {
 
       document.getElementById("status").textContent =
-        "No candle data received";
+        "Waiting for valid candle data...";
 
       return;
+
     }
 
 
     /* =========================
-       REMOVE DUPLICATE CANDLES
+       REMOVE DUPLICATES
     ========================= */
 
     const uniqueCandles = [];
@@ -381,11 +406,13 @@ async function loadCandles() {
        DISPLAY CANDLES
     ========================= */
 
-    candleSeries.setData(uniqueCandles);
+    candleSeries.setData(
+      uniqueCandles
+    );
 
 
     /* =========================
-       REAL VWAP DATA
+       VWAP
     ========================= */
 
     const vwapValues =
@@ -418,8 +445,11 @@ async function loadCandles() {
       .filter(function(item) {
 
         return (
+
           Number.isFinite(item.time) &&
+
           Number.isFinite(item.value)
+
         );
 
       })
@@ -432,7 +462,7 @@ async function loadCandles() {
 
 
     /* =========================
-       REMOVE DUPLICATE VWAP TIMES
+       REMOVE DUPLICATE VWAP
     ========================= */
 
     const uniqueVWAP = [];
@@ -453,30 +483,27 @@ async function loadCandles() {
 
 
     /* =========================
-       DISPLAY REAL VWAP
+       DISPLAY VWAP
     ========================= */
 
-    if (
-      data.vwapStatus === "ok" &&
-      uniqueVWAP.length > 0
-    ) {
+    if (uniqueVWAP.length > 0) {
 
-      vwapSeries.setData(uniqueVWAP);
+      vwapSeries.setData(
+        uniqueVWAP
+      );
 
 
       const latestVWAP =
-        uniqueVWAP[uniqueVWAP.length - 1].value;
+        uniqueVWAP[
+          uniqueVWAP.length - 1
+        ].value;
+
+
+      lastVWAP = latestVWAP;
 
 
       document.getElementById("vwap").textContent =
         latestVWAP.toFixed(2);
-
-    } else {
-
-      vwapSeries.setData([]);
-
-      document.getElementById("vwap").textContent =
-        "--";
 
     }
 
@@ -486,9 +513,13 @@ async function loadCandles() {
     ========================= */
 
     const latest =
-      uniqueCandles[uniqueCandles.length - 1].close;
+      uniqueCandles[
+        uniqueCandles.length - 1
+      ].close;
+
 
     lastPrice = latest;
+
 
     document.getElementById("price").textContent =
       latest.toFixed(2);
@@ -527,13 +558,18 @@ async function loadCandles() {
 
   }
 
+
   catch (error) {
 
-    console.log("Market request failed:", error);
+    console.log(
+      "Market request failed:",
+      error
+    );
 
-    document.getElementById("status").textContent =
-      "Connection problem";
 
+    /*
+       DO NOT ERASE OLD DATA
+    */
 
     if (lastPrice !== null) {
 
@@ -541,6 +577,22 @@ async function loadCandles() {
         lastPrice.toFixed(2);
 
     }
+
+
+    if (lastVWAP !== null) {
+
+      document.getElementById("vwap").textContent =
+        lastVWAP.toFixed(2);
+
+    }
+
+
+    /*
+       Show temporary connection message
+    */
+
+    document.getElementById("status").textContent =
+      "● Using last received market data";
 
   }
 
@@ -553,11 +605,14 @@ async function loadCandles() {
 
 document
   .getElementById("timeframe")
-  .addEventListener("change", function() {
+  .addEventListener(
+    "change",
+    function() {
 
-    loadCandles();
+      loadCandles();
 
-  });
+    }
+  );
 
 
 /* =========================
@@ -570,14 +625,18 @@ loadCandles();
 
 
 /* =========================
-   REFRESH EVERY 10 SECONDS
+   REFRESH
+   EVERY 30 SECONDS
 ========================= */
 
-setInterval(function() {
+setInterval(
+  function() {
 
-  loadCandles();
+    loadCandles();
 
-}, 10000);
+  },
+  30000
+);
 
 </script>
 
