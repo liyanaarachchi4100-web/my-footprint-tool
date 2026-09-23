@@ -6,7 +6,6 @@
 
   <title>AS OrderFlow</title>
 
-  <!-- Lightweight Charts 4.2.3 -->
   <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 
   <style>
@@ -159,6 +158,7 @@
 let lastPrice = null;
 let chart = null;
 let candleSeries = null;
+let vwapSeries = null;
 
 
 /* =========================
@@ -207,6 +207,10 @@ function createChart() {
   });
 
 
+  /* =========================
+     CANDLESTICK SERIES
+  ========================= */
+
   candleSeries = chart.addCandlestickSeries({
 
     upColor: "#26a69a",
@@ -221,6 +225,25 @@ function createChart() {
   });
 
 
+  /* =========================
+     REAL VWAP SERIES
+  ========================= */
+
+  vwapSeries = chart.addLineSeries({
+
+    lineWidth: 2,
+
+    priceLineVisible: false,
+
+    lastValueVisible: true
+
+  });
+
+
+  /* =========================
+     RESIZE
+  ========================= */
+
   window.addEventListener("resize", function() {
 
     chart.applyOptions({
@@ -234,7 +257,7 @@ function createChart() {
 
 
 /* =========================
-   LOAD CANDLES
+   LOAD MARKET DATA
 ========================= */
 
 async function loadCandles() {
@@ -265,7 +288,7 @@ async function loadCandles() {
       !Array.isArray(data.values)
     ) {
 
-      console.log("Candle data unavailable:", data);
+      console.log("Market data unavailable:", data);
 
       document.getElementById("status").textContent =
         "Market data unavailable";
@@ -274,13 +297,19 @@ async function loadCandles() {
     }
 
 
+    /* =========================
+       CANDLES
+    ========================= */
+
     const candles = data.values
 
       .map(function(item) {
 
         const timestamp =
           Math.floor(
-            new Date(item.datetime.replace(" ", "T")).getTime() / 1000
+            new Date(
+              item.datetime.replace(" ", "T")
+            ).getTime() / 1000
           );
 
         return {
@@ -328,7 +357,7 @@ async function loadCandles() {
 
 
     /* =========================
-       REMOVE DUPLICATE TIMES
+       REMOVE DUPLICATE CANDLES
     ========================= */
 
     const uniqueCandles = [];
@@ -349,14 +378,111 @@ async function loadCandles() {
 
 
     /* =========================
-       SEND DATA TO CHART
+       DISPLAY CANDLES
     ========================= */
 
     candleSeries.setData(uniqueCandles);
 
 
     /* =========================
-       SHOW LATEST PRICE
+       REAL VWAP DATA
+    ========================= */
+
+    const vwapValues =
+      Array.isArray(data.vwapValues)
+        ? data.vwapValues
+        : [];
+
+
+    const vwapData = vwapValues
+
+      .map(function(item) {
+
+        const timestamp =
+          Math.floor(
+            new Date(
+              item.datetime.replace(" ", "T")
+            ).getTime() / 1000
+          );
+
+        return {
+
+          time: timestamp,
+
+          value: Number(item.vwap)
+
+        };
+
+      })
+
+      .filter(function(item) {
+
+        return (
+          Number.isFinite(item.time) &&
+          Number.isFinite(item.value)
+        );
+
+      })
+
+      .sort(function(a, b) {
+
+        return a.time - b.time;
+
+      });
+
+
+    /* =========================
+       REMOVE DUPLICATE VWAP TIMES
+    ========================= */
+
+    const uniqueVWAP = [];
+
+    const usedVWAPTimes = new Set();
+
+    vwapData.forEach(function(item) {
+
+      if (!usedVWAPTimes.has(item.time)) {
+
+        usedVWAPTimes.add(item.time);
+
+        uniqueVWAP.push(item);
+
+      }
+
+    });
+
+
+    /* =========================
+       DISPLAY REAL VWAP
+    ========================= */
+
+    if (
+      data.vwapStatus === "ok" &&
+      uniqueVWAP.length > 0
+    ) {
+
+      vwapSeries.setData(uniqueVWAP);
+
+
+      const latestVWAP =
+        uniqueVWAP[uniqueVWAP.length - 1].value;
+
+
+      document.getElementById("vwap").textContent =
+        latestVWAP.toFixed(2);
+
+    } else {
+
+      vwapSeries.setData([]);
+
+      document.getElementById("vwap").textContent =
+        "--";
+
+    }
+
+
+    /* =========================
+       LATEST PRICE
     ========================= */
 
     const latest =
@@ -368,12 +494,29 @@ async function loadCandles() {
       latest.toFixed(2);
 
 
+    /* =========================
+       DELTA / CVD
+       NO FAKE DATA
+    ========================= */
+
+    document.getElementById("delta").textContent =
+      "--";
+
+    document.getElementById("cvd").textContent =
+      "--";
+
+
+    /* =========================
+       STATUS
+    ========================= */
+
     document.getElementById("status").textContent =
       "● Live XAU/USD market data";
 
 
     document.getElementById("footprintStatus").textContent =
-      "Real XAU/USD OHLC candle data connected.";
+      "Real XAU/USD OHLC + VWAP data connected. " +
+      "Real Buy/Sell Delta and CVD data are not available from this feed.";
 
 
     /* =========================
@@ -386,7 +529,7 @@ async function loadCandles() {
 
   catch (error) {
 
-    console.log("Candle request failed:", error);
+    console.log("Market request failed:", error);
 
     document.getElementById("status").textContent =
       "Connection problem";
