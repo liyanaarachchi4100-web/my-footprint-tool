@@ -3,15 +3,23 @@ export default async function handler(req, res) {
     const apiKey = process.env.TWELVE_DATA_API_KEY;
     const interval = req.query.interval || "1min";
 
-    const url =
+    const priceUrl =
       `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${interval}&outputsize=100&apikey=${apiKey}`;
 
-    const response = await fetch(url);
-    const data = await response.json();
+    const vwapUrl =
+      `https://api.twelvedata.com/vwap?symbol=XAU/USD&interval=${interval}&apikey=${apiKey}`;
 
-    if (!response.ok || data.status === "error") {
+    const [priceResponse, vwapResponse] = await Promise.all([
+      fetch(priceUrl),
+      fetch(vwapUrl)
+    ]);
+
+    const data = await priceResponse.json();
+    const vwapData = await vwapResponse.json();
+
+    if (!priceResponse.ok || data.status === "error") {
       return res.status(500).json({
-        error: "Twelve Data error",
+        error: "Twelve Data price error",
         details: data
       });
     }
@@ -30,6 +38,8 @@ export default async function handler(req, res) {
       interval,
       status: "live",
       hasVolume,
+      vwapStatus: vwapData.status || "unknown",
+      vwapValues: vwapData.values || [],
       values
     });
 
