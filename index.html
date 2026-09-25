@@ -43,7 +43,7 @@
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -81,6 +81,17 @@
       border: 1px solid #252d38;
       border-radius: 8px;
       padding: 15px;
+    }
+
+    .info {
+      color: #9aa4b2;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .cards {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     @media (max-width: 700px) {
@@ -126,6 +137,11 @@
     </div>
 
     <div class="card">
+      <div class="label">VOLUME</div>
+      <div class="value" id="volume">--</div>
+    </div>
+
+    <div class="card">
       <div class="label">DELTA</div>
       <div class="value" id="delta">--</div>
     </div>
@@ -145,11 +161,13 @@
   <div id="chart"></div>
 
   <div class="footprint">
+
     <h3>Footprint</h3>
 
-    <p id="footprintStatus">
+    <p id="footprintStatus" class="info">
       Waiting for real market data...
     </p>
+
   </div>
 
 
@@ -157,6 +175,7 @@
 
 let lastPrice = null;
 let lastVWAP = null;
+let lastVolume = null;
 
 let chart = null;
 let candleSeries = null;
@@ -223,8 +242,6 @@ function createChart() {
   });
 
 
-  /* REAL VWAP */
-
   vwapSeries = chart.addLineSeries({
 
     lineWidth: 2,
@@ -235,8 +252,6 @@ function createChart() {
 
   });
 
-
-  /* RESIZE */
 
   window.addEventListener("resize", function() {
 
@@ -277,8 +292,6 @@ async function loadCandles() {
     });
 
 
-    /* CHECK HTTP RESPONSE */
-
     if (!response.ok) {
 
       throw new Error(
@@ -293,19 +306,10 @@ async function loadCandles() {
     console.log("MARKET DATA:", data);
 
 
-    /* =========================
-       CHECK REAL DATA
-    ========================= */
-
     if (
       !Array.isArray(data.values) ||
       data.values.length === 0
     ) {
-
-      console.log(
-        "No candle values received:",
-        data
-      );
 
       document.getElementById("status").textContent =
         "Waiting for market data...";
@@ -402,17 +406,13 @@ async function loadCandles() {
     });
 
 
-    /* =========================
-       DISPLAY CANDLES
-    ========================= */
-
     candleSeries.setData(
       uniqueCandles
     );
 
 
     /* =========================
-       VWAP
+       REAL VWAP
     ========================= */
 
     const vwapValues =
@@ -461,10 +461,6 @@ async function loadCandles() {
       });
 
 
-    /* =========================
-       REMOVE DUPLICATE VWAP
-    ========================= */
-
     const uniqueVWAP = [];
 
     const usedVWAPTimes = new Set();
@@ -481,10 +477,6 @@ async function loadCandles() {
 
     });
 
-
-    /* =========================
-       DISPLAY VWAP
-    ========================= */
 
     if (uniqueVWAP.length > 0) {
 
@@ -526,8 +518,51 @@ async function loadCandles() {
 
 
     /* =========================
-       DELTA / CVD
-       NO FAKE DATA
+       VOLUME
+    ========================= */
+
+    const latestRaw =
+      data.values[
+        data.values.length - 1
+      ];
+
+    const rawVolume =
+      latestRaw.volume;
+
+
+    if (
+      rawVolume !== undefined &&
+      rawVolume !== null &&
+      rawVolume !== ""
+    ) {
+
+      const numericVolume =
+        Number(rawVolume);
+
+      if (Number.isFinite(numericVolume)) {
+
+        lastVolume = numericVolume;
+
+        document.getElementById("volume").textContent =
+          numericVolume.toLocaleString();
+
+      } else {
+
+        document.getElementById("volume").textContent =
+          "--";
+
+      }
+
+    } else {
+
+      document.getElementById("volume").textContent =
+        "--";
+
+    }
+
+
+    /* =========================
+       NO FAKE DELTA / CVD
     ========================= */
 
     document.getElementById("delta").textContent =
@@ -547,7 +582,8 @@ async function loadCandles() {
 
     document.getElementById("footprintStatus").textContent =
       "Real XAU/USD OHLC + VWAP data connected. " +
-      "Real Buy/Sell Delta and CVD data are not available from this feed.";
+      "Volume is shown only when supplied by the data feed. " +
+      "Real Buy/Sell Delta and CVD are not calculated from volume.";
 
 
     /* =========================
@@ -567,10 +603,6 @@ async function loadCandles() {
     );
 
 
-    /*
-       DO NOT ERASE OLD DATA
-    */
-
     if (lastPrice !== null) {
 
       document.getElementById("price").textContent =
@@ -587,9 +619,13 @@ async function loadCandles() {
     }
 
 
-    /*
-       Show temporary connection message
-    */
+    if (lastVolume !== null) {
+
+      document.getElementById("volume").textContent =
+        lastVolume.toLocaleString();
+
+    }
+
 
     document.getElementById("status").textContent =
       "● Using last received market data";
